@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Takealot BuyBox Tracker - Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.4.3/echarts.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/p5.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-teal: #1B4D4D;
+            --warm-orange: #E67E22;
+            --charcoal: #2C3E50;
+            --light-gray: #ECF0F1;
+            --success-green: #27AE60;
+            --warning-amber: #F39C12;
+            --error-red: #E74C3C;
+            --info-blue: #3498DB;
+        }
+        body { font-family: 'Inter', sans-serif; background: linear-gradient(135deg, #1B4D4D 0%, #2C3E50 100%); min-height: 100vh; }
+        .hero-title { font-family: 'Playfair Display', serif; font-weight: 700; }
+        .metric-value { font-family: 'JetBrains Mono', monospace; font-weight: 500; }
+        .card-hover { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .card-hover:hover { transform: translateY(-4px); box-shadow: 0 20px 40px rgba(0,0,0,0.15); }
+        .status-winning { background: linear-gradient(135deg, #27AE60, #2ECC71); }
+        .status-competing { background: linear-gradient(135deg, #F39C12, #F1C40F); }
+        .status-losing { background: linear-gradient(135deg, #E74C3C, #C0392B); }
+        .pulse-animation { animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+        .nav-blur { backdrop-filter: blur(10px); background: rgba(255, 255, 255, 0.95); }
+        #p5-background { position: fixed; top: 0; left: 0; z-index: -1; opacity: 0.3; }
+        .chart-container { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.1); }
+        .buybox-card { background: rgba(255, 255, 255, 0.98); border-left: 4px solid var(--primary-teal); transition: all 0.3s ease; }
+        .buybox-card:hover { border-left-color: var(--warm-orange); transform: translateX(4px); }
+        .price-input { background: rgba(255, 255, 255, 0.9); border: 2px solid transparent; transition: all 0.3s ease; }
+        .price-input:focus { border-color: var(--primary-teal); background: white; }
+        .btn-primary { background: linear-gradient(135deg, var(--primary-teal), #2980B9); transition: all 0.3s ease; }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(27, 77, 77, 0.3); }
+        .metric-card { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border-radius: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.1); }
+        .notification-badge { animation: bounce 1s infinite; }
+        @keyframes bounce { 0%, 20%, 50%, 80%, 100% { transform: translateY(0); } 40% { transform: translateY(-10px); } 60% { transform: translateY(-5px); } }
+    </style>
+</head>
+<body class="text-gray-800">
+    <div id="p5-background"></div>
+    <nav class="nav-blur fixed w-full top-0 z-50 border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center space-x-4">
+                    <div class="flex items-center space-x-2">
+                        <div class="w-8 h-8 bg-gradient-to-br from-teal-600 to-orange-500 rounded-lg flex items-center justify-center"><span class="text-white font-bold text-sm">TB</span></div>
+                        <span class="hero-title text-xl text-gray-800">Takealot BuyBox Tracker</span>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-8">
+                    <a href="index.html" class="text-teal-600 font-semibold border-b-2 border-teal-600 pb-1">Dashboard</a>
+                    <a href="analytics.html" class="text-gray-600 hover:text-teal-600 transition-colors">Analytics</a>
+                    <a href="settings.html" class="text-gray-600 hover:text-teal-600 transition-colors">Settings</a>
+                    <div class="relative">
+                        <button class="bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition-colors">Sync Data</button>
+                        <span class="notification-badge absolute -top-2 -right-2 w-4 h-4 bg-red-500 rounded-full text-xs text-white flex items-center justify-center">3</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <section class="pt-24 pb-12 px-4 sm:px-6 lg:px-8">
+        <div class="max-w-7xl mx-auto">
+            <div class="text-center mb-12">
+                <h1 class="hero-title text-4xl md:text-6xl text-white mb-6">BuyBox Performance<span class="bg-gradient-to-r from-orange-400 to-orange-600 bg-clip-text text-transparent">Dashboard</span></h1>
+                <p class="text-xl text-gray-200 max-w-3xl mx-auto">Real-time monitoring of your Takealot BuyBox performance, competitive pricing, and seller metrics</p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+                <div class="metric-card p-6 card-hover"><div class="flex items-center justify-between mb-4"><h3 class="text-sm font-semibold text-gray-600 uppercase tracking-wide">BuyBox Win Rate</h3><div class="w-3 h-3 bg-green-500 rounded-full pulse-animation"></div></div><div class="metric-value text-3xl font-bold text-gray-800 mb-2" id="win-rate">73.2%</div><div class="text-sm text-green-600 font-medium">+5.4% from last week</div></div>
+                <div class="metric-card p-6 card-hover"><div class="flex items-center justify-between mb-4"><h3 class="text-sm font-semibold text-gray-600 uppercase tracking-wide">Active Products</h3><div class="w-3 h-3 bg-blue-500 rounded-full pulse-animation"></div></div><div class="metric-value text-3xl font-bold text-gray-800 mb-2" id="active-products">247</div><div class="text-sm text-blue-600 font-medium">12 new this month</div></div>
+                <div class="metric-card p-6 card-hover"><div class="flex items-center justify-between mb-4"><h3 class="text-sm font-semibold text-gray-600 uppercase tracking-wide">Seller Rating</h3><div class="w-3 h-3 bg-orange-500 rounded-full pulse-animation"></div></div><div class="metric-value text-3xl font-bold text-gray-800 mb-2" id="seller-rating">4.7</div><div class="text-sm text-orange-600 font-medium">Based on 1,243 reviews</div></div>
+                <div class="metric-card p-6 card-hover"><div class="flex items-center justify-between mb-4"><h3 class="text-sm font-semibold text-gray-600 uppercase tracking-wide">Revenue (ZAR)</h3><div class="w-3 h-3 bg-purple-500 rounded-full pulse-animation"></div></div><div class="metric-value text-3xl font-bold text-gray-800 mb-2" id="revenue">R84,250</div><div class="text-sm text-purple-600 font-medium">This month</div></div>
+            </div>
+        </div>
+    </section>
+
+    <section class="px-4 sm:px-6 lg:px-8 pb-12">
+        <div class="max-w-7xl mx-auto">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div class="lg:col-span-2">
+                    <div class="chart-container p-6 mb-8">
+                        <div class="flex items-center justify-between mb-6"><h2 class="hero-title text-2xl font-semibold text-gray-800">Live BuyBox Status</h2><div class="flex items-center space-x-4"><select class="price-input px-3 py-2 rounded-lg border-0 text-sm" id="category-filter"><option value="all">All Categories</option><option value="electronics">Electronics</option><option value="home">Home & Garden</option><option value="fashion">Fashion</option><option value="books">Books</option></select><button class="btn-primary px-4 py-2 rounded-lg text-white text-sm font-medium">Refresh</button></div></div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="buybox-grid"></div>
+                    </div>
+                    <div class="chart-container p-6"><h2 class="hero-title text-2xl font-semibold text-gray-800 mb-6">Price Competitiveness</h2><div id="price-chart" style="height: 400px;"></div></div>
+                </div>
+                <div class="space-y-8">
+                    <div class="chart-container p-6"><h3 class="hero-title text-xl font-semibold text-gray-800 mb-4">Quick Actions</h3><div class="space-y-4"><button class="w-full btn-primary py-3 rounded-lg text-white font-medium">Auto-Reprice All</button><button class="w-full bg-gray-100 hover:bg-gray-200 py-3 rounded-lg text-gray-700 font-medium transition-colors">Update Inventory</button><button class="w-full bg-gray-100 hover:bg-gray-200 py-3 rounded-lg text-gray-700 font-medium transition-colors">Generate Report</button></div></div>
+                    <div class="chart-container p-6"><h3 class="hero-title text-xl font-semibold text-gray-800 mb-4">Recent Activity</h3><div class="space-y-4" id="activity-feed"></div></div>
+                    <div class="chart-container p-6"><h3 class="hero-title text-xl font-semibold text-gray-800 mb-4">Performance Breakdown</h3><div id="performance-chart" style="height: 250px;"></div></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer class="bg-gray-900 text-white py-8 mt-16"><div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center"><p class="text-gray-400">&copy; 2024 Takealot BuyBox Tracker. Built for South African marketplace success.</p></div></footer>
+
+    <!-- LIVE DATA LOADER (Google-Sheet) -->
+    <script src="https://cdn.jsdelivr.net/gh/kimi-bot/takealot-buybox-tracker@main/google-sheets-loader.js"></script>
+
+    <!-- original animations / charts -->
+    <script>
+        const priceChart = echarts.init(document.getElementById('price-chart'));
+        priceChart.setOption({
+            tooltip:{trigger:'axis',axisPointer:{type:'cross'}},
+            legend:{data:['Your Price','Lowest Competitor','BuyBox Price']},
+            xAxis:{type:'category',data:['Mon','Tue','Wed','Thu','Fri','Sat','Sun']},
+            yAxis:{type:'value',name:'Price (ZAR)',axisLabel:{formatter:'R{value}'}},
+            series:[
+                {name:'Your Price',type:'line',data:[12000,12000,11950,11900,11850,11850,11800],smooth:true,itemStyle:{color:'#1B4D4D'}},
+                {name:'Lowest Competitor',type:'line',data:[11900,11850,11800,11750,11700,11650,11600],smooth:true,itemStyle:{color:'#E74C3C'}},
+                {name:'BuyBox Price',type:'line',data:[11950,11900,11850,11800,11750,11700,11650],smooth:true,itemStyle:{color:'#27AE60'}}
+            ]
+        });
+        const performanceChart = echarts.init(document.getElementById('performance-chart'));
+        performanceChart.setOption({
+            tooltip:{trigger:'item'},
+            series:[{type:'pie',radius:['40%','70%'],itemStyle:{borderRadius:10,borderColor:'#fff',borderWidth:2},label:{show:false,position:'center'},emphasis:{label:{show:true,fontSize:'16',fontWeight:'bold'}},labelLine:{show:false},data:[{value:73,name:'Winning',itemStyle:{color:'#27AE60'}},{value:18,name:'Competing',itemStyle:{color:'#F39C12'}},{value:9,name:'Losing',itemStyle:{color:'#E74C3C'}}]}]
+        });
+        window.addEventListener('resize',()=>{priceChart.resize();performanceChart.resize();});
+    </script>
+</body>
+</html>
